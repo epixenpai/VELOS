@@ -1,13 +1,23 @@
-import Database from 'better-sqlite3';
-import path from 'path';
 import { fileURLToPath } from 'url';
+import path from 'path';
+import fs from 'fs';
+import Database from 'better-sqlite3';
 
+// 1. Recreate __dirname for ES Modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const dbPath = path.join(__dirname, '../db/velos.sqlite');
-const db = new Database(dbPath);
+// 2. Define the target directory and database path
+const dbDir = path.join(__dirname, '../db');
+const dbPath = path.join(dbDir, 'velos.sqlite');
 
+// 3. Ensure the '../db' directory actually exists
+if (!fs.existsSync(dbDir)) {
+    fs.mkdirSync(dbDir, { recursive: true });
+}
+
+// 4. Initialize the database safely
+const db = new Database(dbPath);
 // Initialize tables
 db.exec(`
   CREATE TABLE IF NOT EXISTS projects (
