@@ -125,7 +125,7 @@ function Track({ id, clips, onDrop, updateClipPosition, updateClipDuration }) {
   return (
     <div ref={setNodeRef} className="h-20 bg-gray-900 border-b border-gray-800 relative mb-1 flex items-center">
       <div className="absolute left-0 top-0 bottom-0 w-16 bg-gray-950 border-r border-gray-800 flex items-center justify-center text-xs font-semibold text-gray-500 z-10 pointer-events-none">
-        V{id}
+        {id}
       </div>
 
       <div className="absolute left-16 right-0 top-0 bottom-0 overflow-hidden">
@@ -137,8 +137,9 @@ function Track({ id, clips, onDrop, updateClipPosition, updateClipDuration }) {
           return (
             <div
               key={clip.id}
+              onClick={() => useAppStore.getState().setSelectedClipId(clip.id)}
               onMouseDown={(e) => handleClipMouseDown(e, clip)}
-              className="absolute top-1 bottom-1 bg-velos-primary/80 border border-velos-primary rounded-sm flex items-center text-xs overflow-hidden cursor-move select-none group"
+              className={`absolute top-1 bottom-1 ${useAppStore.getState().selectedClipId === clip.id ? 'bg-velos-secondary/80 border-velos-secondary' : 'bg-velos-primary/80 border-velos-primary'} border rounded-sm flex items-center text-xs overflow-hidden cursor-move select-none group`}
               style={{
                 left: `${displayClip.startTime * PIXELS_PER_SECOND}px`,
                 width: `${displayClip.duration * PIXELS_PER_SECOND}px`
@@ -150,6 +151,10 @@ function Track({ id, clips, onDrop, updateClipPosition, updateClipDuration }) {
                  className="absolute left-0 top-0 bottom-0 w-2 cursor-col-resize hover:bg-white/50 z-20"
                />
                <span className="truncate px-2 flex-1 pointer-events-none">{displayClip.asset.name}</span>
+               {/* Audio Volume Indicator/Control (Basic MVP implementation) */}
+               {displayClip.asset.type === 'audio' && (
+                 <div className="absolute bottom-0 left-0 right-0 h-1 bg-green-500/50" style={{ height: `${(displayClip.volume !== undefined ? displayClip.volume : 1) * 100}%` }} />
+               )}
                {/* Right Trim Handle */}
                <div
                  onMouseDown={(e) => handleTrimMouseDown(e, clip, 'right')}
@@ -176,7 +181,13 @@ export default function Timeline() {
     if (!projectState.tracks || projectState.tracks.length === 0) {
       setProjectState({
         ...projectState,
-        tracks: [{ id: 1, type: 'video', clips: [] }]
+        tracks: [
+        { id: 'V3', type: 'video', clips: [] },
+        { id: 'V2', type: 'video', clips: [] },
+        { id: 'V1', type: 'video', clips: [] },
+        { id: 'A1', type: 'audio', clips: [] },
+        { id: 'A2', type: 'audio', clips: [] }
+      ]
       });
     }
   }, [projectState, setProjectState]);

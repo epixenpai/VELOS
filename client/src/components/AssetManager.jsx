@@ -14,6 +14,28 @@ export default function AssetManager() {
     fetchAssets();
   }, []);
 
+
+  const addTextAsset = () => {
+    const textAsset = {
+      id: crypto.randomUUID(),
+      name: 'Text Layer',
+      type: 'text',
+      properties: { text: 'Hello Velos', fill: '#FFFFFF', fontSize: 80 }
+    };
+    setAssets([textAsset, ...assets]);
+  };
+
+
+  const addShapeAsset = () => {
+    const shapeAsset = {
+      id: crypto.randomUUID(),
+      name: 'Rectangle',
+      type: 'shape',
+      properties: { shapeType: 'rect', fill: '#2D6FFF', width: 300, height: 300 }
+    };
+    setAssets([shapeAsset, ...assets]);
+  };
+
   const fetchAssets = async () => {
     try {
       const res = await fetch(`${apiUrl}/assets`);
@@ -51,24 +73,31 @@ export default function AssetManager() {
 
   const filteredAssets = assets.filter(a => a.type === activeTab);
 
-  const tabs = [
+const tabs = [
     { id: 'video', icon: Video, label: 'Videos' },
     { id: 'audio', icon: Music, label: 'Audio' },
     { id: 'image', icon: ImageIcon, label: 'Images' },
-    { id: 'font', icon: Type, label: 'Fonts' },
+    { id: 'text', icon: Type, label: 'Text' },
+    { id: 'shape', icon: ImageIcon, label: 'Shapes' },
   ];
 
   return (
     <div className="h-full flex flex-col bg-gray-900 border-r border-gray-800 w-80 shrink-0">
       <div className="p-4 border-b border-gray-800">
+
         <button
           onClick={() => fileInputRef.current?.click()}
           disabled={isUploading}
-          className="w-full bg-velos-primary hover:bg-blue-600 text-white py-2 rounded-md flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+          className="w-full bg-velos-primary hover:bg-blue-600 text-white py-2 rounded-md flex items-center justify-center gap-2 transition-colors disabled:opacity-50 mb-2"
         >
           <Upload size={18} />
           {isUploading ? 'Uploading...' : 'Import Media'}
         </button>
+        <div className="flex gap-2">
+           <button onClick={addTextAsset} className="flex-1 bg-gray-800 hover:bg-gray-700 text-xs py-1.5 rounded text-gray-300">Add Text</button>
+           <button onClick={addShapeAsset} className="flex-1 bg-gray-800 hover:bg-gray-700 text-xs py-1.5 rounded text-gray-300">Add Shape</button>
+        </div>
+
         <input
           type="file"
           ref={fileInputRef}

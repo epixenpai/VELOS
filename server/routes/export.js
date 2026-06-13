@@ -31,13 +31,6 @@ router.post('/:id/export', async (req, res) => {
       return res.status(400).json({ error: 'Project timeline is empty' });
     }
 
-    const videoTrack = state.tracks.find(t => t.id === 1);
-    if (!videoTrack || videoTrack.clips.length === 0) {
-      return res.status(400).json({ error: 'No video clips on track 1' });
-    }
-
-    const clips = [...videoTrack.clips].sort((a, b) => a.startTime - b.startTime);
-
     const exportDir = path.join(__dirname, '../../exports', project.name.replace(/[^a-z0-9]/gi, '_').toLowerCase());
     if (!fs.existsSync(exportDir)) {
       fs.mkdirSync(exportDir, { recursive: true });
@@ -47,83 +40,96 @@ router.post('/:id/export', async (req, res) => {
     const outputPath = path.join(exportDir, outputFilename);
 
     let command = ffmpeg();
+    let filterString = '';
 
-    const clipMetadata = await Promise.all(clips.map(async (clip) => {
+    // We only process video and audio for Phase 2 MVP. True overlay of text/shapes via ffmpeg is extremely complex,
+    // usually requires generating ASS subtitle files or rendering a transparent video from canvas.
+    // For now, we mix multiple video and audio tracks.
+
+    const allClips = [];
+    state.tracks.forEach(t => {
+       t.clips.forEach(c => allClips.push({...c, trackType: t.type, trackId: t.id}));
+    });
+
+    if (allClips.length === 0) {
+      return res.status(400).json({ error: 'No clips on timeline' });
+    }
+
+    // Sort by start time
+    allClips.sort((a, b) => a.startTime - b.startTime);
+
+    const clipMetadata = await Promise.all(allClips.map(async (clip, idx) => {
+       if (clip.asset.type !== 'video' && clip.asset.type !== 'audio') {
+          return { clip, isMedia: false, idx };
+       }
        const inputPath = path.join(__dirname, '../../', clip.asset.path);
-       const hasAudio = await hasAudioStream(inputPath);
-       return { clip, inputPath, hasAudio };
+       const hasAudio = clip.asset.type === 'audio' ? true : await hasAudioStream(inputPath);
+       return { clip, inputPath, hasAudio, isMedia: true, idx };
     }));
 
-    clipMetadata.forEach(meta => {
+    const mediaClips = clipMetadata.filter(m => m.isMedia);
+
+    mediaClips.forEach(meta => {
       command = command.input(meta.inputPath);
     });
 
-    let filterString = '';
+    // Create a base black background video of the total duration
+    const totalDuration = Math.max(...allClips.map(c => c.startTime + c.duration));
+    const bgColor = state.settings?.backgroundColor || '#000000';
 
-    // Scale, pad, setpts, and trim video streams based on clip properties
-    for (let i = 0; i < clipMetadata.length; i++) {
-        const { clip } = clipMetadata[i];
+    // We use the color source filter
+    command = command.input(`color=c=${bgColor.replace('#','0x')}@1:s=1920x1080:d=${totalDuration}`).inputFormat('lavfi');
+    const bgIndex = mediaClips.length;
 
-        // Trim video (trim filter uses seconds)
-        // Set presentation timestamp to match startTime
-        const trimFilter = `trim=start=${clip.startOffset || 0}:duration=${clip.duration},setpts=PTS-STARTPTS+${clip.startTime}/TB`;
+    // We will use overlay filter to place videos on the background at their exact start times
+    let currentVideoOutput = `[${bgIndex}:v]`;
+    let overlayCount = 0;
+    let audioMixInputs = '';
 
-        // Scale and pad to 1920x1080
-        const scalePadFilter = `scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2,setsar=1`;
+    for (let i = 0; i < mediaClips.length; i++) {
+        const { clip, hasAudio } = mediaClips[i];
 
-        filterString += `[${i}:v]${trimFilter},${scalePadFilter}[v${i}];`;
-    }
+        if (clip.asset.type === 'video') {
+            // Trim and scale
+            const trimFilter = `trim=start=${clip.startOffset || 0}:duration=${clip.duration},setpts=PTS-STARTPTS`;
+            const scalePadFilter = `scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2,setsar=1`;
+            filterString += `[${i}:v]${trimFilter},${scalePadFilter}[v${i}pre];`;
 
-    // Process audio streams (trim, atrim, delay, dummy generation)
-    for (let i = 0; i < clipMetadata.length; i++) {
-        const { clip, hasAudio } = clipMetadata[i];
+            // Fade transition
+            if (clip.transition === 'fade') {
+               filterString += `[v${i}pre]fade=t=in:st=0:d=1,fade=t=out:st=${clip.duration - 1}:d=1[v${i}ready];`;
+            } else {
+               filterString += `[v${i}pre]copy[v${i}ready];`;
+            }
 
+            // Overlay onto the timeline background
+            const enable = `enable='between(t,${clip.startTime},${clip.startTime + clip.duration})'`;
+            const newOutput = `[vout${overlayCount}]`;
+            filterString += `${currentVideoOutput}[v${i}ready]overlay=0:0:${enable}${newOutput};`;
+            currentVideoOutput = newOutput;
+            overlayCount++;
+        }
+
+        // Handle Audio
         if (hasAudio) {
-            // Trim audio, reset pts, then pad/delay to startTime
-            const atrimFilter = `atrim=start=${clip.startOffset || 0}:duration=${clip.duration},asetpts=PTS-STARTPTS,adelay=${clip.startTime * 1000}|${clip.startTime * 1000},aformat=sample_rates=44100:channel_layouts=stereo`;
-            filterString += `[${i}:a]${atrimFilter}[a${i}];`;
-        } else {
-            // Generate dummy audio matching duration, then delay it
-            filterString += `anullsrc=r=44100:cl=stereo,atrim=duration=${clip.duration},adelay=${clip.startTime * 1000}|${clip.startTime * 1000}[a${i}];`;
+            const vol = clip.volume !== undefined ? clip.volume : 1.0;
+            const atrimFilter = `atrim=start=${clip.startOffset || 0}:duration=${clip.duration},asetpts=PTS-STARTPTS,volume=${vol},adelay=${clip.startTime * 1000}|${clip.startTime * 1000}`;
+            filterString += `[${i}:a]${atrimFilter}[a${i}ready];`;
+            audioMixInputs += `[a${i}ready]`;
         }
     }
 
-    // Since clips might have gaps, concat filter might not be correct if we used PTS.
-    // However, if we're just layering them on a black background, we should use amix for audio
-    // But for Phase 1 MVP, if we assume sequential clips with possible gaps, concat works if we pad the gaps,
-    // OR we can just use complex overlay mapping.
-    // For MVP phase 1, we will keep the standard concatenation but inject black frames for gaps.
-    // A much simpler MVP Phase 1 fix is just basic concat without gaps for now,
-    // since the user only trims clips to make them shorter. True compositing requires overlay filters which is too complex for basic MP4.
+    // Add a silent track of total duration so amix doesn't fail if no audio is present
+    command = command.input(`anullsrc=r=44100:cl=stereo:d=${totalDuration}`).inputFormat('lavfi');
+    const silentAudioIndex = mediaClips.length + 1;
+    filterString += `[${silentAudioIndex}:a]aformat=sample_rates=44100:channel_layouts=stereo[asilent];`;
+    audioMixInputs += `[asilent]`;
 
-    // Actually, to make trim work with concat:
-    // we don't need PTS delay. Concat places them back to back.
-    // If the user arranged them back to back, it works.
+    // Mix audio
+    const audioInputCount = mediaClips.filter(m => m.hasAudio).length + 1; // +1 for the silent track
+    filterString += `${audioMixInputs}amix=inputs=${audioInputCount}:duration=first:dropout_transition=3[aout]`;
 
-    // Let's rewrite the filter for simple concat of trimmed clips
-    filterString = '';
-
-    for (let i = 0; i < clipMetadata.length; i++) {
-        const { clip } = clipMetadata[i];
-        const trimFilter = `trim=start=${clip.startOffset || 0}:duration=${clip.duration},setpts=PTS-STARTPTS`;
-        const scalePadFilter = `scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2,setsar=1`;
-        filterString += `[${i}:v]${trimFilter},${scalePadFilter}[v${i}];`;
-
-        if (clipMetadata[i].hasAudio) {
-            const atrimFilter = `atrim=start=${clip.startOffset || 0}:duration=${clip.duration},asetpts=PTS-STARTPTS,aformat=sample_rates=44100:channel_layouts=stereo`;
-            filterString += `[${i}:a]${atrimFilter}[a${i}];`;
-        } else {
-            filterString += `anullsrc=r=44100:cl=stereo,atrim=duration=${clip.duration}[a${i}];`;
-        }
-    }
-
-    let concatInputs = '';
-    for (let i = 0; i < clipMetadata.length; i++) {
-        concatInputs += `[v${i}][a${i}]`;
-    }
-    filterString += `${concatInputs}concat=n=${clipMetadata.length}:v=1:a=1[outv][outa]`;
-
-    command.complexFilter(filterString, ['outv', 'outa'])
+    command.complexFilter(filterString, [currentVideoOutput.replace(/[[]]/g, ''), 'aout'])
            .outputOptions([
              '-c:v libx264',
              '-pix_fmt yuv420p',

@@ -18,11 +18,50 @@ export const useAppStore = create((set, get) => ({
   isPlaying: false,
   setIsPlaying: (playing) => set({ isPlaying: playing }),
 
-  // Project state
-  projectState: { tracks: [] },
-  setProjectState: (state) => set({ projectState: state }),
+  // Project state and History
+  projectState: { tracks: [], settings: { backgroundColor: '#0F0F0F' } },
+  history: [],
+  historyIndex: -1,
+
+  setProjectState: (state) => set((get) => {
+     const currentHistory = get().history.slice(0, get().historyIndex + 1);
+     const newHistory = [...currentHistory, get().projectState];
+     // Keep last 50 states
+     if (newHistory.length > 50) newHistory.shift();
+
+     return {
+       projectState: state,
+       history: newHistory,
+       historyIndex: newHistory.length - 1
+     };
+  }),
+
+  undo: () => set((get) => {
+    const { history, historyIndex, projectState } = get();
+    if (historyIndex < 0) return {}; // Nothing to undo
+
+    const previousState = history[historyIndex];
+    // We don't push the current state to history again during undo
+    return {
+      projectState: previousState,
+      historyIndex: historyIndex - 1
+    };
+  }),
+
+  redo: () => set((get) => {
+    const { history, historyIndex, projectState } = get();
+    if (historyIndex >= history.length - 1) return {}; // Nothing to redo
+
+    const nextState = history[historyIndex + 1];
+    return {
+      projectState: nextState,
+      historyIndex: historyIndex + 1
+    };
+  }),
 
   // Drag and drop state
+  selectedClipId: null,
+  setSelectedClipId: (id) => set({ selectedClipId: id }),
   draggedAsset: null,
   setDraggedAsset: (asset) => set({ draggedAsset: asset }),
 

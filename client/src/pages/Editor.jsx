@@ -133,10 +133,47 @@ export default function Editor() {
             </div>
           </div>
 
-          {/* Properties Area (Bottom Right context, temporary placement) */}
-          <div className="h-48 border-t border-gray-800 bg-gray-900 p-4 hidden md:block">
-            <h3 className="text-sm font-semibold text-gray-400 mb-2">Properties</h3>
-            <div className="text-xs text-gray-500">Select an item to view its properties.</div>
+{/* Properties Area */}
+          <div className="h-48 border-t border-gray-800 bg-gray-900 p-4 hidden md:block overflow-y-auto">
+            <h3 className="text-sm font-semibold text-gray-400 mb-4">Properties</h3>
+            {useAppStore.getState().selectedClipId ? (
+              <div className="flex flex-col gap-4">
+                 <div>
+                    <label className="text-xs text-gray-500 block mb-1">Transition (Fade)</label>
+                    <select
+                       className="bg-black border border-gray-700 text-white text-xs rounded px-2 py-1"
+                       onChange={(e) => {
+                          const store = useAppStore.getState();
+                          const newTracks = store.projectState.tracks.map(t => ({
+                             ...t, clips: t.clips.map(c => c.id === store.selectedClipId ? { ...c, transition: e.target.value } : c)
+                          }));
+                          store.setProjectState({ ...store.projectState, tracks: newTracks });
+                       }}
+                    >
+                       <option value="">None</option>
+                       <option value="fade">Fade In/Out</option>
+                    </select>
+                 </div>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-4">
+                 <div>
+                    <label className="text-xs text-gray-500 block mb-1">Canvas Background</label>
+                    <input
+                       type="color"
+                       className="w-8 h-8 rounded cursor-pointer bg-transparent border-0 p-0"
+                       value={useAppStore.getState().projectState?.settings?.backgroundColor || '#0F0F0F'}
+                       onChange={(e) => {
+                          const store = useAppStore.getState();
+                          store.setProjectState({
+                             ...store.projectState,
+                             settings: { ...store.projectState.settings, backgroundColor: e.target.value }
+                          });
+                       }}
+                    />
+                 </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
