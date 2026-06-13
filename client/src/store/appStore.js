@@ -23,21 +23,21 @@ export const useAppStore = create((set, get) => ({
   history: [],
   historyIndex: -1,
 
-  setProjectState: (state) => set((get) => {
-     const currentHistory = get().history.slice(0, get().historyIndex + 1);
-     const newHistory = [...currentHistory, get().projectState];
+  setProjectState: (newState) => set((state) => {
+     const currentHistory = state.history.slice(0, state.historyIndex + 1);
+     const newHistory = [...currentHistory, state.projectState];
      // Keep last 50 states
      if (newHistory.length > 50) newHistory.shift();
 
      return {
-       projectState: state,
+       projectState: newState,
        history: newHistory,
        historyIndex: newHistory.length - 1
      };
   }),
 
-  undo: () => set((get) => {
-    const { history, historyIndex, projectState } = get();
+  undo: () => set((state) => {
+    const { history, historyIndex, projectState } = state;
     if (historyIndex < 0) return {}; // Nothing to undo
 
     const previousState = history[historyIndex];
@@ -48,8 +48,8 @@ export const useAppStore = create((set, get) => ({
     };
   }),
 
-  redo: () => set((get) => {
-    const { history, historyIndex, projectState } = get();
+  redo: () => set((state) => {
+    const { history, historyIndex, projectState } = state;
     if (historyIndex >= history.length - 1) return {}; // Nothing to redo
 
     const nextState = history[historyIndex + 1];
