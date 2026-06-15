@@ -98,23 +98,29 @@ export default function Editor() {
 
   return (
     <DndContext onDragEnd={handleDragEnd}>
-    <div className="h-screen w-full bg-black text-white flex flex-col overflow-hidden">
+    <div className="h-screen w-full bg-velos-darker text-gray-200 flex flex-col overflow-hidden font-sans">
       {/* Topbar */}
-      <header className="h-14 border-b border-gray-800 bg-velos-dark flex items-center justify-between px-4 shrink-0">
+      {/* Topbar */}
+      <header className="h-12 border-b border-velos-border bg-velos-panel flex items-center justify-between px-4 shrink-0 shadow-sm z-50">
         <div className="flex items-center gap-4">
-          <button onClick={() => navigate('/')} className="text-gray-400 hover:text-white transition-colors">
-            <ChevronLeft size={20} />
+          <button onClick={() => navigate('/')} className="text-gray-400 hover:text-white transition-colors p-1.5 rounded hover:bg-gray-800">
+            <ChevronLeft size={18} />
           </button>
-          <div className="font-semibold">{project.name}</div>
+          <div className="flex items-center gap-2">
+            <div className="w-5 h-5 border-[1.5px] border-velos-primary rounded flex items-center justify-center font-bold text-velos-primary transform rotate-45 text-[10px]">
+              <span className="-rotate-45">/</span>
+            </div>
+            <div className="font-semibold text-sm tracking-wide text-gray-100">{project.name}</div>
+          </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <button className="text-gray-400 hover:text-white p-2">
-            <Settings size={18} />
+        <div className="flex items-center gap-2">
+          <button className="text-gray-400 hover:text-white p-1.5 rounded hover:bg-gray-800 transition-colors">
+            <Settings size={16} />
           </button>
-          <button onClick={handleExport} disabled={isExporting} className="bg-velos-primary hover:bg-blue-600 px-4 py-1.5 rounded text-sm font-medium flex items-center gap-2 transition-colors disabled:opacity-50">
-            <Download size={16} />
-            {isExporting ? 'Exporting...' : 'Export'}
+          <button onClick={handleExport} disabled={isExporting} className="bg-velos-primary hover:bg-blue-600 px-3 py-1.5 rounded text-xs font-semibold flex items-center gap-1.5 transition-all shadow-md disabled:opacity-50 tracking-wide text-white ml-2">
+            <Download size={14} />
+            {isExporting ? 'EXPORTING...' : 'EXPORT'}
           </button>
         </div>
       </header>
@@ -125,10 +131,10 @@ export default function Editor() {
         <AssetManager />
 
         {/* Center Panel - Canvas & Properties */}
-        <div className="flex-1 flex flex-col min-w-0 bg-black">
+        <div className="flex-1 flex flex-col min-w-0 bg-velos-darker relative">
           {/* Canvas Area */}
-          <div className="flex-1 p-4 flex items-center justify-center relative bg-[url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAUCAYAAACNiR0NAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAACtJREFUeNpi/P//PwM1ARMDlcGogcSDGRkZkGwxwKxIHDXwUANJMwEgwAAgKwKxS8p0pQAAAABJRU5ErkJggg==')]">
-            <div className="w-full h-full border border-gray-800 bg-black shadow-2xl flex items-center justify-center text-gray-600">
+          <div className="flex-1 p-6 flex items-center justify-center relative shadow-inner">
+            <div className="w-full h-full bg-black shadow-[0_0_40px_rgba(0,0,0,0.5)] flex items-center justify-center text-gray-600 border border-gray-900 rounded-sm overflow-hidden">
               <PreviewCanvas />
             </div>
           </div>
@@ -176,8 +182,8 @@ export default function Editor() {
       </div>
 
       {/* Timeline Area */}
-      <div className="h-64 border-t border-gray-800 bg-gray-900 shrink-0 flex flex-col">
-        <div className="h-8 border-b border-gray-800 bg-gray-950 flex items-center px-4 gap-4 text-xs text-gray-400">
+      <div className="h-72 border-t border-velos-border bg-velos-panel shrink-0 flex flex-col shadow-[0_-5px_20px_rgba(0,0,0,0.3)] z-40 relative">
+        <div className="h-0 hidden">
           <div>Timeline Controls</div>
         </div>
         <div className="flex-1 relative overflow-auto p-4">

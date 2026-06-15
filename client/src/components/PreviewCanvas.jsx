@@ -170,7 +170,7 @@ let opacity = 1;
         const scaleY = height / videoEl.videoHeight || 1;
         const vScale = Math.min(scaleX, scaleY);
 
-        if (!isNaN(vScale) && vScale !== Infinity && vScale > 0) {
+if (!isNaN(vScale) && vScale !== Infinity && vScale > 0) {
             fabricImage.scale(vScale);
         }
 
@@ -181,6 +181,8 @@ let opacity = 1;
            if (p.brightness) filters.push(new fabric.Image.filters.Brightness({ brightness: parseFloat(p.brightness) }));
            if (p.contrast) filters.push(new fabric.Image.filters.Contrast({ contrast: parseFloat(p.contrast) }));
            if (p.saturation) filters.push(new fabric.Image.filters.Saturation({ saturation: parseFloat(p.saturation) }));
+           if (p.blur) filters.push(new fabric.Image.filters.Blur({ blur: parseFloat(p.blur) }));
+           if (p.noise) filters.push(new fabric.Image.filters.Noise({ noise: parseInt(p.noise, 10) }));
 
            if (filters.length > 0) {
               fabricImage.filters = filters;

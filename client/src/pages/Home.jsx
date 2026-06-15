@@ -51,14 +51,14 @@ export default function Home() {
   const filteredProjects = projects.filter(p => p.name.toLowerCase().includes(search.toLowerCase()));
 
   return (
-    <div className="min-h-screen bg-velos-dark text-white p-8">
+    <div className="min-h-screen bg-velos-darker text-gray-200 p-8 font-sans">
       <div className="max-w-6xl mx-auto">
         <header className="flex justify-between items-center mb-12">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 border-2 border-velos-primary rounded-md flex items-center justify-center font-bold text-velos-primary transform rotate-45">
               <span className="-rotate-45">/</span>
             </div>
-            <h1 className="text-3xl font-bold tracking-wider">VELOS</h1>
+            <h1 className="text-3xl font-extrabold tracking-widest text-white">VELOS</h1>
           </div>
           <button
             onClick={() => setIsModalOpen(true)}
@@ -73,7 +73,7 @@ export default function Home() {
           <input
             type="text"
             placeholder="Search projects..."
-            className="w-full md:w-1/3 bg-gray-900 border border-gray-700 rounded-md px-4 py-2 focus:outline-none focus:border-velos-primary text-white"
+            className="w-full md:w-1/3 bg-velos-panel border border-velos-border rounded-md px-4 py-2.5 focus:outline-none focus:border-velos-primary text-gray-200 shadow-sm transition-colors"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -89,9 +89,9 @@ export default function Home() {
               <div
                 key={project.id}
                 onClick={() => navigate(`/project/${project.id}`)}
-                className="bg-gray-900 border border-gray-800 rounded-lg overflow-hidden cursor-pointer hover:border-velos-primary transition-colors group relative"
+                className="bg-velos-panel border border-velos-border rounded-lg overflow-hidden cursor-pointer hover:border-velos-primary transition-all duration-300 group relative shadow-md hover:shadow-lg hover:-translate-y-1"
               >
-                <div className="aspect-video bg-gray-800 flex items-center justify-center">
+                <div className="aspect-video bg-velos-darker flex items-center justify-center border-b border-velos-border">
                   {/* Placeholder for project thumbnail */}
                   <Play size={40} className="text-gray-600 group-hover:text-velos-primary transition-colors" />
                 </div>
@@ -113,7 +113,7 @@ export default function Home() {
       {/* Create Project Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-          <div className="bg-gray-900 border border-gray-800 rounded-lg p-6 w-full max-w-md">
+          <div className="bg-velos-panel border border-velos-border rounded-xl p-8 w-full max-w-md shadow-2xl">
             <h2 className="text-2xl font-bold mb-6">Create New Project</h2>
             <form onSubmit={handleCreateProject}>
               <div className="mb-4">
@@ -124,7 +124,7 @@ export default function Home() {
                   required
                   value={newProjectName}
                   onChange={(e) => setNewProjectName(e.target.value)}
-                  className="w-full bg-black border border-gray-700 rounded-md px-3 py-2 text-white focus:outline-none focus:border-velos-primary"
+                  className="w-full bg-velos-darker border border-velos-border rounded-md px-4 py-2 text-gray-200 focus:outline-none focus:border-velos-primary transition-colors"
                 />
               </div>
               <div className="grid grid-cols-2 gap-4 mb-6">
@@ -133,7 +133,7 @@ export default function Home() {
                   <select
                     value={aspectRatio}
                     onChange={(e) => setAspectRatio(e.target.value)}
-                    className="w-full bg-black border border-gray-700 rounded-md px-3 py-2 text-white focus:outline-none focus:border-velos-primary"
+                    className="w-full bg-velos-darker border border-velos-border rounded-md px-4 py-2 text-gray-200 focus:outline-none focus:border-velos-primary transition-colors"
                   >
                     <option value="16:9">16:9 (Landscape)</option>
                     <option value="9:16">9:16 (Portrait)</option>
@@ -145,7 +145,7 @@ export default function Home() {
                   <select
                     value={frameRate}
                     onChange={(e) => setFrameRate(Number(e.target.value))}
-                    className="w-full bg-black border border-gray-700 rounded-md px-3 py-2 text-white focus:outline-none focus:border-velos-primary"
+                    className="w-full bg-velos-darker border border-velos-border rounded-md px-4 py-2 text-gray-200 focus:outline-none focus:border-velos-primary transition-colors"
                   >
                     <option value={24}>24 fps</option>
                     <option value={30}>30 fps</option>

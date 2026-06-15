@@ -123,8 +123,8 @@ function Track({ id, clips, onDrop, updateClipPosition, updateClipDuration }) {
   };
 
   return (
-    <div ref={setNodeRef} className="h-20 bg-gray-900 border-b border-gray-800 relative mb-1 flex items-center">
-      <div className="absolute left-0 top-0 bottom-0 w-16 bg-gray-950 border-r border-gray-800 flex items-center justify-center text-xs font-semibold text-gray-500 z-10 pointer-events-none">
+    <div ref={setNodeRef} className="h-24 bg-velos-dark border-b border-velos-border relative flex items-center group">
+      <div className="absolute left-0 top-0 bottom-0 w-20 bg-velos-panel border-r border-velos-border flex flex-col items-center justify-center text-xs font-bold text-gray-500 z-10 pointer-events-none shadow-[5px_0_15px_rgba(0,0,0,0.2)] gap-1">
         {id}
       </div>
 
@@ -134,12 +134,21 @@ function Track({ id, clips, onDrop, updateClipPosition, updateClipDuration }) {
           if (draggingClip && draggingClip.id === clip.id) displayClip = draggingClip;
           if (trimmingClip && trimmingClip.clip.id === clip.id) displayClip = trimmingClip.clip;
 
+          let bgClass = 'bg-velos-primary/80 border-velos-primary';
+          if (clip.asset.type === 'audio') bgClass = 'bg-emerald-600/80 border-emerald-500';
+          if (clip.asset.type === 'text') bgClass = 'bg-purple-600/80 border-purple-500';
+          if (clip.asset.type === 'shape') bgClass = 'bg-orange-600/80 border-orange-500';
+
+          const isSelected = useAppStore.getState().selectedClipId === clip.id;
+          if (isSelected) bgClass = 'bg-velos-secondary/90 border-velos-secondary shadow-[0_0_15px_rgba(245,197,24,0.3)] z-30';
+
+
           return (
             <div
               key={clip.id}
               onClick={() => useAppStore.getState().setSelectedClipId(clip.id)}
               onMouseDown={(e) => handleClipMouseDown(e, clip)}
-              className={`absolute top-1 bottom-1 ${useAppStore.getState().selectedClipId === clip.id ? 'bg-velos-secondary/80 border-velos-secondary' : 'bg-velos-primary/80 border-velos-primary'} border rounded-sm flex items-center text-xs overflow-hidden cursor-move select-none group`}
+              className={`absolute top-2 bottom-2 ${bgClass} border rounded-md flex items-center text-[11px] font-medium text-white overflow-hidden cursor-move select-none group transition-shadow`}
               style={{
                 left: `${displayClip.startTime * PIXELS_PER_SECOND}px`,
                 width: `${displayClip.duration * PIXELS_PER_SECOND}px`
@@ -230,7 +239,7 @@ export default function Timeline() {
   const handleRulerClick = (e) => {
     if (!timelineRef.current) return;
     const rect = timelineRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left - 64 + timelineRef.current.scrollLeft;
+    const x = e.clientX - rect.left - 80 + timelineRef.current.scrollLeft;
     if (x >= 0) setCurrentTime(x / PIXELS_PER_SECOND);
   };
 
@@ -241,7 +250,7 @@ export default function Timeline() {
 
   return (
       <div className="h-full flex flex-col select-none">
-        <div className="h-10 border-b border-gray-800 bg-gray-950 flex items-center px-4 justify-between shrink-0">
+        <div className="h-12 border-b border-velos-border bg-velos-darker flex items-center px-6 justify-between shrink-0 shadow-sm z-10">
           <div className="flex items-center gap-2">
             <button onClick={togglePlay} className="p-1.5 text-gray-300 hover:text-white hover:bg-gray-800 rounded transition-colors">
               {isPlaying ? <Pause size={18} /> : <Play size={18} />}
@@ -264,18 +273,18 @@ export default function Timeline() {
         </div>
 
         <div
-          className="flex-1 relative overflow-auto bg-gray-950"
+          className="flex-1 relative overflow-auto bg-velos-darker no-scrollbar"
           ref={timelineRef}
         >
           <div
-             className="h-6 border-b border-gray-800 ml-16 relative bg-gray-900 overflow-hidden cursor-text"
+             className="h-7 border-b border-velos-border ml-20 relative bg-velos-panel overflow-hidden cursor-text shadow-sm"
              onMouseDown={handleRulerClick}
              onMouseMove={handleRulerDrag}
           >
             {[...Array(60)].map((_, i) => (
               <div
                 key={i}
-                className="absolute top-0 bottom-0 border-l border-gray-700 text-[10px] text-gray-500 pl-1 pointer-events-none"
+                className="absolute top-0 bottom-0 border-l border-gray-700/50 text-[10px] text-gray-500 pl-1.5 pt-1 pointer-events-none font-mono"
                 style={{ left: `${i * PIXELS_PER_SECOND}px` }}
               >
                 00:{i.toString().padStart(2, '0')}
@@ -283,12 +292,12 @@ export default function Timeline() {
             ))}
           </div>
 
-          <div className="relative">
+<div className="relative">
             <div
-              className="absolute top-0 bottom-0 w-px bg-red-500 z-40 pointer-events-none"
-              style={{ left: `${64 + (currentTime * PIXELS_PER_SECOND)}px` }}
+              className="absolute top-0 bottom-0 w-[1.5px] bg-velos-primary z-40 pointer-events-none shadow-[0_0_10px_rgba(45,111,255,0.5)]"
+              style={{ left: `${80 + (currentTime * PIXELS_PER_SECOND)}px` }}
             >
-              <div className="w-0 h-0 border-l-[5px] border-r-[5px] border-t-[8px] border-l-transparent border-r-transparent border-t-red-500 absolute -top-[8px] -left-[5px]"></div>
+              <div className="w-0 h-0 border-l-[6px] border-r-[6px] border-t-[10px] border-l-transparent border-r-transparent border-t-velos-primary absolute -top-[10px] -left-[5px]"></div>
             </div>
 
             {projectState.tracks?.map(track => (
