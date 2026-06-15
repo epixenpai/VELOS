@@ -19,7 +19,7 @@ export default function PreviewCanvas({ width = 1920, height = 1080 }) {
       width,
       height,
       backgroundColor: '#000000',
-      selection: false, // Turn off selection for Phase 1 basic preview
+      selection: true,
       preserveObjectStacking: true,
     });
 
@@ -44,10 +44,50 @@ export default function PreviewCanvas({ width = 1920, height = 1080 }) {
 
     resizeObserver.observe(containerRef.current);
 
+    // Handle object modified
+    canvas.on('object:modified', (e) => {
+      const obj = e.target;
+      if (!obj || !obj.clipId) return;
+
+      const store = useAppStore.getState();
+      const newTracks = store.projectState.tracks.map(t => {
+         return {
+            ...t,
+            clips: t.clips.map(c => {
+               if (c.id === obj.clipId) {
+                  return {
+                     ...c,
+                     asset: {
+                        ...c.asset,
+                        properties: {
+                           ...c.asset.properties,
+                           left: obj.left,
+                           top: obj.top,
+                           scaleX: obj.scaleX,
+                           scaleY: obj.scaleY,
+                           angle: obj.angle,
+                           width: obj.width * obj.scaleX,
+                           height: obj.height * obj.scaleY,
+                        }
+                     }
+                  }
+               }
+               return c;
+            })
+         }
+      });
+      store.setProjectState({ ...store.projectState, tracks: newTracks });
+    });
+
+    canvas.on('selection:created', (e) => {
+       if (e.selected && e.selected.length > 0 && e.selected[0].clipId) {
+           useAppStore.getState().setSelectedClipId(e.selected[0].clipId);
+       }
+    });
+
     return () => {
       resizeObserver.disconnect();
       canvas.dispose();
-      // Cleanup video elements
       Object.values(videoElementsRef.current).forEach(video => {
         video.pause();
         video.removeAttribute('src');
@@ -123,6 +163,7 @@ let opacity = 1;
           originY: 'center',
           opacity: opacity,
           objectCaching: false,
+          clipId: activeClip.id,
         });
 
         const scaleX = width / videoEl.videoWidth || 1;
@@ -133,12 +174,30 @@ let opacity = 1;
             fabricImage.scale(vScale);
         }
 
+        // Apply visual effects if properties exist
+        if (activeClip.asset.properties) {
+           const p = activeClip.asset.properties;
+           const filters = [];
+           if (p.brightness) filters.push(new fabric.Image.filters.Brightness({ brightness: parseFloat(p.brightness) }));
+           if (p.contrast) filters.push(new fabric.Image.filters.Contrast({ contrast: parseFloat(p.contrast) }));
+           if (p.saturation) filters.push(new fabric.Image.filters.Saturation({ saturation: parseFloat(p.saturation) }));
+
+           if (filters.length > 0) {
+              fabricImage.filters = filters;
+              fabricImage.applyFilters();
+           }
+        }
+
         canvasRef.current.add(fabricImage);
       } else if (activeClip && activeClip.asset.type === 'text') {
         const textProperties = activeClip.asset.properties || {};
         const textObj = new fabric.Text(textProperties.text || 'New Text', {
+          clipId: activeClip.id,
           left: textProperties.left || width / 2,
           top: textProperties.top || height / 2,
+          scaleX: textProperties.scaleX || 1,
+          scaleY: textProperties.scaleY || 1,
+          angle: textProperties.angle || 0,
           originX: 'center',
           originY: 'center',
           fill: textProperties.fill || '#FFFFFF',
@@ -153,8 +212,12 @@ let opacity = 1;
         let shapeObj;
 
         const commonProps = {
+          clipId: activeClip.id,
           left: shapeProperties.left || width / 2,
           top: shapeProperties.top || height / 2,
+          scaleX: shapeProperties.scaleX || 1,
+          scaleY: shapeProperties.scaleY || 1,
+          angle: shapeProperties.angle || 0,
           originX: 'center',
           originY: 'center',
           fill: shapeProperties.fill || '#2D6FFF',
@@ -165,11 +228,12 @@ let opacity = 1;
         if (shapeProperties.shapeType === 'circle') {
            shapeObj = new fabric.Circle({ ...commonProps, radius: commonProps.width / 2 });
         } else {
-           // Default to rectangle
            shapeObj = new fabric.Rect({ ...commonProps, rx: shapeProperties.rx || 0, ry: shapeProperties.ry || 0 });
         }
 
         canvasRef.current.add(shapeObj);
+      } else if (activeClip && activeClip.asset.type === 'image') {
+          // Add image support
       }
     });
 

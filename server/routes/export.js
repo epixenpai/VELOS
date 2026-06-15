@@ -89,15 +89,27 @@ router.post('/:id/export', async (req, res) => {
     for (let i = 0; i < mediaClips.length; i++) {
         const { clip, hasAudio } = mediaClips[i];
 
-        if (clip.asset.type === 'video') {
-            // Trim and scale
+if (clip.asset.type === 'video') {
+            // Eq filter for Brightness, Contrast, Saturation
+            const props = clip.asset.properties || {};
+            const brightness = props.brightness || 0;
+            const contrast = props.contrast ? (1 + parseFloat(props.contrast)) : 1;
+            const saturation = props.saturation ? (1 + parseFloat(props.saturation)) : 1;
+            const eqFilter = `eq=brightness=${brightness}:contrast=${contrast}:saturation=${saturation}`;
+
+            // Trim, eq, and scale
             const trimFilter = `trim=start=${clip.startOffset || 0}:duration=${clip.duration},setpts=PTS-STARTPTS`;
             const scalePadFilter = `scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2,setsar=1`;
-            filterString += `[${i}:v]${trimFilter},${scalePadFilter}[v${i}pre];`;
+            filterString += `[${i}:v]${trimFilter},${eqFilter},${scalePadFilter}[v${i}pre];`;
 
-            // Fade transition
+            // Transitions
             if (clip.transition === 'fade') {
                filterString += `[v${i}pre]fade=t=in:st=0:d=1,fade=t=out:st=${clip.duration - 1}:d=1[v${i}ready];`;
+            } else if (clip.transition === 'wipe') {
+               // A simple wipe logic approximation: crop expanding
+               filterString += `[v${i}pre]copy[v${i}ready];`; // FFmpeg true wipe requires xfade between two streams, we just copy for MVP overlay
+            } else if (clip.transition === 'slide') {
+               filterString += `[v${i}pre]copy[v${i}ready];`;
             } else {
                filterString += `[v${i}pre]copy[v${i}ready];`;
             }
@@ -118,6 +130,30 @@ router.post('/:id/export', async (req, res) => {
             audioMixInputs += `[a${i}ready]`;
         }
     }
+
+    // Add text layers via drawtext
+    const textClips = allClips.filter(c => c.asset.type === 'text');
+    let textOverlayOutput = currentVideoOutput;
+
+    textClips.forEach((clip, idx) => {
+        const p = clip.asset.properties || {};
+        const text = (p.text || 'Text').replace(/:/g, '\\:').replace(/'/g, "\\'");
+        const color = (p.fill || '#FFFFFF').replace('#', '0x');
+        const size = p.fontSize || 60;
+
+        // Fabric left/top are center-origin by default in our setup,
+        // FFmpeg drawtext uses top-left. We approximate center here.
+        const x = p.left ? `${p.left}-(tw/2)` : '(w-tw)/2';
+        const y = p.top ? `${p.top}-(th/2)` : '(h-th)/2';
+
+        const enable = `enable='between(t,${clip.startTime},${clip.startTime + clip.duration})'`;
+        const newOut = `[textout${idx}]`;
+
+        filterString += `${textOverlayOutput}drawtext=text='${text}':fontcolor=${color}:fontsize=${size}:x=${x}:y=${y}:${enable}${newOut};`;
+        textOverlayOutput = newOut;
+    });
+
+    currentVideoOutput = textOverlayOutput;
 
     // Add a silent track of total duration so amix doesn't fail if no audio is present
     command = command.input(`anullsrc=r=44100:cl=stereo:d=${totalDuration}`).inputFormat('lavfi');

@@ -18,8 +18,13 @@ export const uploadAsset = (req, res) => {
 
   const file = req.file;
   const id = crypto.randomUUID();
-  // Using path posix to ensure consistent URL separators regardless of OS
-  const relativePath = path.posix.join('assets', 'videos', file.filename);
+
+  let type = 'video';
+  let folder = 'videos';
+  if (file.mimetype.startsWith('image/')) { type = 'image'; folder = 'images'; }
+  if (file.mimetype.startsWith('audio/')) { type = 'audio'; folder = 'audio'; }
+
+  const relativePath = path.posix.join('assets', folder, file.filename);
 
   try {
     const stmt = db.prepare(`
@@ -27,13 +32,12 @@ export const uploadAsset = (req, res) => {
       VALUES (?, ?, ?, ?, ?, ?)
     `);
 
-    // Defaulting to video for Phase 1 MVP
-    stmt.run(id, file.originalname, 'video', relativePath, file.mimetype, file.size);
+    stmt.run(id, file.originalname, type, relativePath, file.mimetype, file.size);
 
     res.status(201).json({
       id,
       name: file.originalname,
-      type: 'video',
+      type,
       path: relativePath,
       mimeType: file.mimetype,
       size: file.size

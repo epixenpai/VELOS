@@ -139,20 +139,17 @@ export default function Editor() {
             {useAppStore.getState().selectedClipId ? (
               <div className="flex flex-col gap-4">
                  <div>
-                    <label className="text-xs text-gray-500 block mb-1">Transition (Fade)</label>
-                    <select
-                       className="bg-black border border-gray-700 text-white text-xs rounded px-2 py-1"
-                       onChange={(e) => {
-                          const store = useAppStore.getState();
-                          const newTracks = store.projectState.tracks.map(t => ({
-                             ...t, clips: t.clips.map(c => c.id === store.selectedClipId ? { ...c, transition: e.target.value } : c)
-                          }));
-                          store.setProjectState({ ...store.projectState, tracks: newTracks });
-                       }}
-                    >
-                       <option value="">None</option>
-                       <option value="fade">Fade In/Out</option>
-                    </select>
+                    <label className="text-xs text-gray-500 block mb-1">Transition</label>
+                           <select
+                              className="bg-black border border-gray-700 text-white text-xs rounded px-2 py-1"
+                              value={activeClip.transition || ''}
+                              onChange={(e) => updateClipTransition(e.target.value)}
+                           >
+                              <option value="">None</option>
+                              <option value="fade">Fade In/Out</option>
+                              <option value="wipe">Wipe Left</option>
+                              <option value="slide">Slide Up</option>
+                           </select>
                  </div>
               </div>
             ) : (

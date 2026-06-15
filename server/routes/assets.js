@@ -7,10 +7,13 @@ import { getAssets, uploadAsset } from '../controllers/assetController.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Configure Multer for video uploads
+// Configure Multer for dynamic file uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, path.join(__dirname, '../../assets/videos'));
+    let folder = 'videos';
+    if (file.mimetype.startsWith('image/')) folder = 'images';
+    if (file.mimetype.startsWith('audio/')) folder = 'audio';
+    cb(null, path.join(__dirname, '../../assets', folder));
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
