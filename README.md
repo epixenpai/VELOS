@@ -26,7 +26,7 @@ sudo pacman -S ffmpeg
 ```bash
 cd server
 npm install
-npm start
+npm run dev
 ```
 The server will start on port `3000` and will print the local network IP you can use to access it from other devices (e.g., your phone).
 
